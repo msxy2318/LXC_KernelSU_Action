@@ -144,6 +144,12 @@ jobs:
         sed -i '/select CFS_BANDWIDTH/d' utils/Kconfig
         sed -i '/select DOCKER_STATISTICS/d' utils/Kconfig
         
+
+        # 【新增修改】移除 Block IO 限制和网络网桥相关的越权语句
+        sed -i '/select BLK_DEV_THROTTLING/d' utils/Kconfig
+        sed -i '/select CFQ_GROUP_IOSCHED/d' utils/Kconfig
+        sed -i '/select BRIDGE_VLAN_FILTERING/d' utils/Kconfig
+        
         echo 'source "utils/Kconfig"' >> "Kconfig"
 
         echo "CONFIG_DOCKER=y" >> arch/${{ env.ARCH }}/configs/${{ env.KERNEL_CONFIG }}
@@ -155,8 +161,10 @@ jobs:
         sed -i '/CONFIG_ANDROID_PARANOID_NETWORK/d' arch/${{ env.ARCH }}/configs/${{ env.KERNEL_CONFIG }}
         echo "# CONFIG_ANDROID_PARANOID_NETWORK is not set" >> arch/${{ env.ARCH }}/configs/${{ env.KERNEL_CONFIG }}
         echo 'source "utils/Kconfig"' >> "Kconfig"
+        # 【新增修改】显式禁用发生冲突的 Block 特性
+        echo "# CONFIG_BLK_DEV_THROTTLING is not set" >> arch/${{ env.ARCH }}/configs/${{ env.KERNEL_CONFIG }}
+        echo "# CONFIG_CFQ_GROUP_IOSCHED is not set" >> arch/${{ env.ARCH }}/configs/${{ env.KERNEL_CONFIG }}
 
-        echo "CONFIG_DOCKER=y" >> arch/${{ env.ARCH }}/configs/${{ env.KERNEL_CONFIG }}
 
         sed -i '/CONFIG_ANDROID_PARANOID_NETWORK/d' arch/${{ env.ARCH }}/configs/${{ env.KERNEL_CONFIG }}
         echo "# CONFIG_ANDROID_PARANOID_NETWORK is not set" >> arch/${{ env.ARCH }}/configs/${{ env.KERNEL_CONFIG }}
