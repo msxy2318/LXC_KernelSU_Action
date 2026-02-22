@@ -170,6 +170,8 @@ jobs:
         sed -i '/sdm845-v2-qvr-evt.dtb/d' arch/arm64/boot/dts/qcom/Makefile
         # 【新增】将含有语法错误且我们用不到的 qvr (高通VR测试板) 设备树从编译列表中剔除
         sed -i '/qvr/d' arch/arm64/boot/dts/qcom/Makefile
+        # 【新增】将同样有语法错误且用不到的 interposer (骁龙670转接板) 设备树剔除
+        sed -i '/interposer/d' arch/arm64/boot/dts/qcom/Makefile
 
 
         sed -i '/CONFIG_ANDROID_PARANOID_NETWORK/d' arch/${{ env.ARCH }}/configs/${{ env.KERNEL_CONFIG }}
