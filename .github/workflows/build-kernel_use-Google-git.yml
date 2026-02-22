@@ -140,6 +140,7 @@ jobs:
         rm -rf utils
         git clone https://github.com/tomxi1997/lxc-docker-support-for-android.git utils
 
+
         # 【新增】移除 LXC 补丁中强制选中 CFS_BANDWIDTH 和 DOCKER_STATISTICS 的越权语句
         sed -i '/select CFS_BANDWIDTH/d' utils/Kconfig
         sed -i '/select DOCKER_STATISTICS/d' utils/Kconfig
@@ -167,6 +168,8 @@ jobs:
 
         # 【新增修改】修复内核源码自带的 QVR 设备树语法错误（剔除无关的 VR 设备树）
         sed -i '/sdm845-v2-qvr-evt.dtb/d' arch/arm64/boot/dts/qcom/Makefile
+        # 【新增】将含有语法错误且我们用不到的 qvr (高通VR测试板) 设备树从编译列表中剔除
+        sed -i '/qvr/d' arch/arm64/boot/dts/qcom/Makefile
 
 
         sed -i '/CONFIG_ANDROID_PARANOID_NETWORK/d' arch/${{ env.ARCH }}/configs/${{ env.KERNEL_CONFIG }}
