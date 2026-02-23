@@ -240,24 +240,54 @@ jobs:
       if: env.CHECK_FILE_IS_OK == 'true'
       run: |
         cd $GITHUB_WORKSPACE/kernel_workspace
-        git clone https://github.com/osm0sis/AnyKernel3
-        sed -i 's/do.devicecheck=1/do.devicecheck=0/g' AnyKernel3/anykernel.sh
-        sed -i 's!block=/dev/block/platform/omap/omap_hsmmc.0/by-name/boot;!block=auto;!g' AnyKernel3/anykernel.sh
-        sed -i 's/is_slot_device=0;/is_slot_device=auto;/g' AnyKernel3/anykernel.sh
+        git clone https://github.com/osm0sis/AnyKernel3 --depth=1 AnyKernel3
         cp android-kernel/out/arch/${{ env.ARCH }}/boot/${{ env.KERNEL_IMAGE_NAME }} AnyKernel3/
         if [ ${{ env.CHECK_DTBO_IS_OK }} = true ]; then
             cp android-kernel/out/arch/${{ env.ARCH }}/boot/dtbo.img AnyKernel3/
         fi
-        rm -rf AnyKernel3/.git* AnyKernel3/README.md
+        
+        cd AnyKernel3
+        # 使用成功脚本的方案：直接覆写一个干净的 anykernel.sh
+        cat >anykernel.sh <<EOF
+        properties() { '
+        kernel.string=LXC-KernelSU-Kernel for ${{ env.DEVICE }}
+        device.name1=${{ env.DEVICE }}
+        do.devicecheck=1
+        '; }
+        ramdisk_compression=auto
+        patch_vbmeta_flag=auto
+        is_slot_device=auto
+        block=auto
+        . tools/ak3-core.sh
+        split_boot
+        flash_boot
+        EOF
+        
+        # 按照成功脚本的方案：打包为 ZIP 并排除不需要的文件
+        zip -qr9 AnyKernel3.zip * -x .git .github README.md *placeholder
 
     - name: Make boot image
-      if: env.HAVE_SOURCE_BOOT_IMAGE == 'true' && env.CHECK_FILE_IS_OK == 'true'
+      if: env.CHECK_FILE_IS_OK == 'true' && env.BUILD_BOOT_IMG == 'true'
       run: |
         cd $GITHUB_WORKSPACE/kernel_workspace
-        tools/unpack_bootimg.py --boot_img boot-source.img
-        cp android-kernel/out/arch/${{ env.ARCH }}/boot/${{ env.KERNEL_IMAGE_NAME }} out/kernel
-        tools/mkbootimg.py ${{ env.FORMAT_MKBOOTING }} -o boot.img
+        git clone https://android.googlesource.com/platform/system/tools/mkbootimg --depth=1 mkbootimg
+        cp android-kernel/out/arch/${{ env.ARCH }}/boot/${{ env.KERNEL_IMAGE_NAME }} mkbootimg/
+        cd mkbootimg
+        
+        sudo apt-get install -y jq
+        
+        # 【修改这里】：直接写死 polaris，不要用 ${{ env.DEVICE }}，以免 API 报错！
+        boot_url=$(curl -LSs https://download.lineageos.org/api/v2/devices/polaris/builds | jq -r '.[0].files[1].url')
+        curl -LSs $boot_url -o boot.img
+        
+        mkbootimg_args=$(./unpack_bootimg.py --out out --boot_img boot.img --format mkbootimg)
+        mv ${{ env.KERNEL_IMAGE_NAME }} out/kernel
+        
+        # 【修改这里】：最终生成的文件名也可以写死，或者继续用变量，不影响开机
+        eval "./mkbootimg.py $mkbootimg_args -o boot.img"
+        
         if [ -f boot.img ]; then
+            mv boot.img ../
             echo "MAKE_BOOT_IMAGE_IS_OK=true" >> $GITHUB_ENV
         else
             echo "Boot image is empty"
